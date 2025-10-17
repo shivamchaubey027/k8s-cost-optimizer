@@ -1,44 +1,94 @@
 package main
 
-import "github.com/gin-gonic/gin"
-
-type Pod struct {
-	Name          string `json:"name"`
-	Namespace     string `json:"nameSpace"`
-	CPURequest    string `json:"cpuRequest"`
-	MemoryRequest string `json:"memoryRequest"`
-	IpAddress     string `json:"ipAddress"`
-}
+import (
+	"github.com/gin-gonic/gin"
+	"github.com/shivamchaubey027/k8s-cost-optimizer/internal/models"
+	"github.com/shivamchaubey027/k8s-cost-optimizer/pkg/database"
+)
 
 type Server struct {
-	pods []Pod
+	pods []models.Pod
 }
 
 func (s *Server) getPods(c *gin.Context) {
-	c.JSON(200, s.pods)
+
+	var pods []models.Pod
+	result := database.DB.Find(&pods)
+
+	if result.Error != nil {
+		c.JSON(500, gin.H{"error": "No pods found"})
+	}
+
+	c.JSON(200, pods)
 }
 
 func (s *Server) createPod(c *gin.Context) {
-	var newPod Pod
+	var newPod models.Pod
 
 	if err := c.ShouldBindJSON(&newPod); err != nil {
 		c.JSON(400, gin.H{"error": "Bad Request"})
 		return
 	}
 
-	s.pods = append(s.pods, newPod)
+	result := database.DB.Create(&newPod)
+
+	if result.Error != nil {
+		c.JSON(500, gin.H{"error": "Failed to save Pod"})
+		return
+	}
 
 	c.JSON(201, newPod)
 }
 
+func (s *Server) putPod(c *gin.Context) {
+	idToUpdate := c.Param("id")
+
+	var existingPod models.Pod
+	findResult := database.DB.Find(&models.Pod{}, idToUpdate)
+	if findResult.Error != nil {
+		c.JSON(404, gin.H{"error": "error"})
+		return
+	}
+
+	var updatePod models.Pod
+	if err := c.ShouldBindJSON(&updatePod); err != nil {
+		c.JSON(400, gin.H{"error": "Bad Request"})
+		return
+	}
+
+	existingPod.Name = updatePod.Name
+	existingPod.Namespace = updatePod.Namespace
+	existingPod.CPURequest = updatePod.CPURequest
+	existingPod.MemoryRequest = updatePod.MemoryRequest
+
+	saveResult := database.DB.Save(&existingPod)
+	if saveResult.Error != nil {
+		c.JSON(500, gin.H{"error": "Couldnt Save Results"})
+	}
+
+	c.JSON(200, existingPod)
+
+}
+
+func (s *Server) deletePod(c *gin.Context) {
+	idToDelete := c.Param("id")
+
+	result := database.DB.Delete(&models.Pod{}, idToDelete)
+	if result.Error != nil {
+		c.JSON(500, gin.H{"error": "Failed to delete"})
+		return
+	}
+
+	c.JSON(200, gin.H{"message": "Pod deleted successfully"})
+
+}
+
 func main() {
+
+	database.Connect()
+
 	server := &Server{
-		pods: []Pod{
-			{Name: "webapp-1", Namespace: "production", CPURequest: "500m", MemoryRequest: "1Gi"},
-			{Name: "database-1", Namespace: "production", CPURequest: "4", MemoryRequest: "8Gi"},
-			{Name: "cache-1", Namespace: "production", CPURequest: "1", MemoryRequest: "2Gi"},
-			{Name: "api-gateway-1", Namespace: "ingress", CPURequest: "1", MemoryRequest: "1Gi"},
-		},
+		pods: []models.Pod{},
 	}
 
 	router := gin.Default()
@@ -56,6 +106,10 @@ func main() {
 			"status": "ok",
 		})
 	})
+
+	v1.DELETE("/pods/:id", server.deletePod)
+
+	v1.PUT("/pods/:id", server.putPod)
 
 	router.Run("localhost:8080")
 }
