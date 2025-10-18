@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: Pod
+metadata: 
+  name: nginx-test-pod
+spec:
+  containers: 
+    - name: nginx-webserver
+      image: nginx:1.21
+      ports:
+        - containerPort: 80

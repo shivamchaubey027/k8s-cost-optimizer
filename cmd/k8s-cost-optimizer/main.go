@@ -4,6 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/shivamchaubey027/k8s-cost-optimizer/internal/models"
 	"github.com/shivamchaubey027/k8s-cost-optimizer/pkg/database"
+	"github.com/shivamchaubey027/k8s-cost-optimizer/pkg/k8s"
 )
 
 type Server struct {
@@ -83,9 +84,14 @@ func (s *Server) deletePod(c *gin.Context) {
 
 }
 
+func (s *Server) getLivePods(c *gin.Context) {
+
+}
+
 func main() {
 
 	database.Connect()
+	k8s.Connect()
 
 	server := &Server{
 		pods: []models.Pod{},
