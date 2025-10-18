@@ -29,6 +29,6 @@ func Connect() {
 		log.Fatalf("Failed to create Kubernetes clientset: %v", err)
 	}
 
-	clientset = clientset
+	Clientset = clientset
 	log.Println("Succesfully connected to kubernetes cluster")
 }

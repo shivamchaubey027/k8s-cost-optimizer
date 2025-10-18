@@ -1,10 +1,14 @@
 package main
 
 import (
+	"context"
+	"log"
+
 	"github.com/gin-gonic/gin"
 	"github.com/shivamchaubey027/k8s-cost-optimizer/internal/models"
 	"github.com/shivamchaubey027/k8s-cost-optimizer/pkg/database"
 	"github.com/shivamchaubey027/k8s-cost-optimizer/pkg/k8s"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type Server struct {
@@ -85,7 +89,16 @@ func (s *Server) deletePod(c *gin.Context) {
 }
 
 func (s *Server) getLivePods(c *gin.Context) {
+	log.Println("--- DEBUG: Calling getLivePods ---")
+	podLists, err := k8s.Clientset.CoreV1().Pods("default").List(context.Background(), metav1.ListOptions{})
+	if err != nil {
 
+		log.Printf("!!! DEBUG: Error fetching pods: %v", err)
+		c.JSON(500, gin.H{"error": "Bad Request"})
+		return
+	}
+	log.Printf("--- DEBUG: Found %d pods in 'default' namespace ---", len(podLists.Items))
+	c.JSON(200, podLists.Items)
 }
 
 func main() {
@@ -116,6 +129,8 @@ func main() {
 	v1.DELETE("/pods/:id", server.deletePod)
 
 	v1.PUT("/pods/:id", server.putPod)
+
+	v1.GET("/k8s/pods/live", server.getLivePods)
 
 	router.Run("localhost:8080")
 }
