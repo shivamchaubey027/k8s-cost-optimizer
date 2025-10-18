@@ -11,7 +11,6 @@ import (
 )
 
 type Server struct {
-	pods []models.Pod
 }
 
 func (s *Server) GetPods(c *gin.Context) {
