@@ -27,6 +27,10 @@ func SetupRouter(router *gin.Engine) {
 		v1.PUT("/pods/:id", server.PutPod)
 
 		v1.GET("/k8s/pods/live", server.GetLivePods)
+
+		v1.GET("/savings", server.GetSavings)
+
+		v1.GET("/recommendations", server.GetRecommendations)
 	}
 
 }
