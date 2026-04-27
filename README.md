@@ -2,6 +2,23 @@
 
 This project is a Go-based application designed to monitor Kubernetes resource requests, store historical data, and provide basic cost estimations based on those requests. It serves as a foundational tool for understanding resource allocation in a Kubernetes cluster.
 
+## Architecture Diagram 
+
+![Arch-diagram](images/cost-optimizer.png)
+
+The system is built around a Go application running a Gin HTTP server. A background goroutine fires every 10 seconds, hits the Kubernetes API directly via client-go, pulls the current pod resource requests from the cluster, and writes them to PostgreSQL - no manual triggering needed, it just runs.
+On top of that, four REST endpoints expose different views into the collected data:
+
+GET /health - basic liveness check
+GET /api/v1/k8s/pods/live - bypasses the DB entirely and fetches pod state straight from the Kubernetes API in real time
+GET /api/v1/savings - aggregates historical requests stored in Postgres and runs cost estimation logic against them
+GET /api/v1/recommendations - averages out CPU and memory requests per pod across all historical records so you can see which pods are consistently over-requested
+
+Everything persists to PostgreSQL running via Docker Compose. The goroutine and the API handlers all write/read from the same historical_pod_requests table, so the cost and recommendation endpoints are always working off accumulated data, not just a point-in-time snapshot.
+The Kubernetes cluster (Minikube locally) sits separately - the Go app talks to its API server over client-go, reads the running pods, and that's it. No sidecar, no operator, just a straightforward out-of-cluster client hitting the K8s API.
+
+---
+
 ## Features
 
 * **REST API:** Built with the Gin framework, providing endpoints to interact with the system.
